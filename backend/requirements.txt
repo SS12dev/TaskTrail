@@ -1,0 +1,18 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-dotenv==1.0.1
+pydantic-settings==2.12.0
+firebase-admin==6.7.0
+
+# LangChain & LangGraph
+langchain==1.2.3
+langchain-core==1.2.7
+langchain-openai==1.1.7
+langchain-text-splitters==1.1.0
+langgraph==1.0.6
+
+# OpenAI
+openai==2.15.0
+
+# Additional utilities
+tiktoken==0.8.0

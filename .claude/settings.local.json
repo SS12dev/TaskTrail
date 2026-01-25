@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /b \"c:\\\\Users\\\\shiva\\\\OneDrive\\\\Desktop\\\\TaskTrail\\\\backend\")",
+      "Bash(dir /b \"c:\\\\Users\\\\shiva\\\\OneDrive\\\\Desktop\\\\TaskTrail\\\\frontend\\\\src\")",
+      "Bash(curl:*)",
+      "Bash(./venv/Scripts/python.exe -m pip:*)",
+      "Bash(taskkill:*)",
+      "Bash(npm install:*)",
+      "Bash(.venvScriptspython.exe -c \"import sys; print\\(sys.executable\\)\")",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(pip install:*)",
+      "Bash(python -m uvicorn:*)",
+      "Bash(timeout /t 3)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout /t 5)",
+      "Bash(python:*)",
+      "Bash(pip show:*)"
+    ]
+  }
+}

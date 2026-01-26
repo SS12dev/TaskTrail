@@ -168,6 +168,9 @@ class AgentService:
                             "action": final_state.get("last_action"),
                         }
                     )
+                    
+                    # Auto-compaction: Check if we should compact old messages
+                    await self._auto_compact_if_needed()
 
             logger.info(
                 f"AgentState processed successfully - User: {self.user_id}, "
@@ -190,6 +193,32 @@ class AgentService:
 
             logger.info(f"Returning error state for user {self.user_id}")
             return error_state
+
+    async def _auto_compact_if_needed(self, threshold: int = 50) -> None:
+        """
+        Auto-compact conversation memory if message count exceeds threshold.
+        
+        Args:
+            threshold: Number of messages before triggering compaction (default: 50)
+        """
+        try:
+            # Count current messages
+            message_count = 0
+            docs = self.agent_system.conversation_memory.conversations_ref.limit(threshold + 1).stream()
+            for _ in docs:
+                message_count += 1
+                if message_count > threshold:
+                    break
+            
+            if message_count > threshold:
+                logger.info(f"Auto-compaction triggered for user {self.user_id} ({message_count} messages)")
+                summary = self.agent_system.conversation_memory.summarize_and_compact(retain_last=20)
+                if summary:
+                    logger.info(f"Successfully compacted {message_count - 20} messages into summary")
+                else:
+                    logger.warning(f"Auto-compaction returned no summary for user {self.user_id}")
+        except Exception as e:
+            logger.warning(f"Auto-compaction failed for user {self.user_id}: {e}")
 
     @staticmethod
     def get_instance(user_id: str) -> "AgentService":

@@ -45,6 +45,16 @@ Added to `backend/requirements.txt`:
 - `backend/tests/test_memory.py`
   - Mocks Firestore + LLM to validate summary compaction
   - Ensures VectorMemory gracefully handles missing Redis configuration
+- `backend/tests/conftest.py`
+  - Pytest fixture to ensure the backend `app` module is importable
+
+Run tests:
+```bash
+cd backend
+pytest ./tests/test_memory.py -v
+```
+
+Current status: ✅ 2/2 tests passing (no deprecation warnings)
 
 ## Future Work
 - Add scheduled compaction based on message counts per user

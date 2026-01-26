@@ -120,3 +120,12 @@ When you create tasks, use these ISO dates (YYYY-MM-DD format) or natural langua
         if context:
             return f"{base_prompt}\n\n{context}\n\n{guidance}"
         return f"{base_prompt}\n\n{guidance}"
+
+    @staticmethod
+    def attach_memory_context(prompt: str, memory_context: str | None) -> str:
+        """
+        Optionally attach retrieved memory context to a prompt.
+        """
+        if memory_context:
+            return f"{prompt}\n\nRelevant Memory:\n{memory_context}"
+        return prompt

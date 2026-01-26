@@ -107,6 +107,29 @@ class AgentService:
 
             logger.debug(f"Built user context: {user_context_obj.timezone} - {user_context_obj.current_timestamp}")
 
+            # Build memory context (recent summary + vector recall)
+            memory_snippets = []
+            try:
+                from app.services.conversation_memory import ConversationMemory
+                from app.services.vector_memory import VectorMemory
+                conv_mem = ConversationMemory(self.user_id)
+                recent_summary = conv_mem.get_context_summary(max_messages=5)
+                if recent_summary:
+                    memory_snippets.append(recent_summary)
+                # Vector recall from last user message if available
+                last_msg = state.get("messages", [])[-1] if state.get("messages") else None
+                query_text = last_msg.content if hasattr(last_msg, 'content') else (last_msg.get('content') if isinstance(last_msg, dict) else None)
+                if query_text:
+                    vec = VectorMemory()
+                    results = vec.search(self.user_id, query_text, k=3)
+                    if results:
+                        memory_snippets.append("Top relevant history:\n" + "\n".join([f"- {r['text'][:160]}" for r in results]))
+                # Attach combined memory context
+                if memory_snippets:
+                    state["memory_context"] = "\n\n".join(memory_snippets)
+            except Exception as e:
+                logger.warning(f"Memory context build skipped: {e}")
+
             # Run through compiled graph
             final_state = await self.agent_system.compiled_graph.ainvoke(state)
 

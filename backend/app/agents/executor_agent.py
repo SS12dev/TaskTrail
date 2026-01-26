@@ -158,6 +158,7 @@ class ExecutorAgent:
 
             # Build context-aware system prompt
             system_prompt = PromptBuilder.build_executor_prompt(EXECUTOR_SYSTEM_PROMPT, state)
+            system_prompt = PromptBuilder.attach_memory_context(system_prompt, state.get("memory_context"))
 
             # Create messages for LLM
             messages = [

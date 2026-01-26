@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     websocket_ping_timeout: int = 30
     websocket_max_connections_per_user: int = 5
 
+    # Redis Configuration (for vector memory)
+    redis_url: Optional[str] = None  # e.g., redis://localhost:6379/0
+    redis_index_name: str = "tasktrail_memory"
+    redis_namespace: str = "tasktrail"
+
     # External A2A Agents Configuration
     # Comma-separated list of external agent discovery URLs
     external_agents: str = ""

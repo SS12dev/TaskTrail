@@ -97,6 +97,7 @@ class QueryAgent:
 
             # Build context-aware query prompt
             system_prompt = PromptBuilder.build_query_prompt(QUERY_SYSTEM_PROMPT, state)
+            system_prompt = PromptBuilder.attach_memory_context(system_prompt, state.get("memory_context"))
 
             # Create messages for LLM
             messages = [

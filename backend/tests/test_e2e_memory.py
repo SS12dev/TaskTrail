@@ -15,21 +15,31 @@ import pytest
 from unittest.mock import MagicMock, patch
 import asyncio
 
+import time
+import os
+from pathlib import Path
 
-@pytest.mark.skip(reason="E2E test - requires Firebase credentials")
-async def test_e2e_memory_flow():
-    """
-    Full end-to-end test of memory system.
+def test_e2e_memory_flow():
+    """Full end-to-end test of memory system with real Firebase."""
+    # Load environment variables from .env file
+    from dotenv import load_dotenv
+    backend_dir = Path(__file__).parent.parent
+    env_path = backend_dir / '.env'
+    if env_path.exists():
+        load_dotenv(env_path)
     
-    Prerequisites:
-    - Firebase credentials configured
-    - Redis running (optional, will gracefully degrade)
-    """
+    from app.firebase import initialize_firebase
     from app.services.conversation_memory import ConversationMemory
     from app.services.vector_memory import VectorMemory
     
+    # Initialize Firebase (safe to call multiple times)
+    try:
+        initialize_firebase()
+    except:
+        pass  # Already initialized
+    
     # Test with a unique user ID
-    test_user = "test_e2e_user_123"
+    test_user = f"test_e2e_user_{int(time.time())}"
     
     # Initialize memory
     conv_mem = ConversationMemory(test_user)

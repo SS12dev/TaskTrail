@@ -24,3 +24,4 @@ langchain-redis
 
 # Testing
 pytest
+pytest-asyncio

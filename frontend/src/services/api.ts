@@ -82,3 +82,17 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+export async function apiCall<T = unknown>(
+  path: string,
+  options: { method?: string; data?: unknown; params?: Record<string, unknown> } = {}
+): Promise<T> {
+  const { method = 'GET', data, params } = options;
+  const response = await api.request<T>({
+    url: path,
+    method,
+    data,
+    params,
+  });
+  return response.data;
+}

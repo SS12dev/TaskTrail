@@ -11,7 +11,8 @@ import {
   Sparkles,
   User,
   Zap,
-  Bot
+  Bot,
+  Folder
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -32,6 +33,7 @@ export const Sidebar = () => {
     { path: '/today', icon: Calendar, label: 'Today' },
     { path: '/kanban', icon: Layers, label: 'Kanban' },
     { path: '/tasks', icon: ListTodo, label: 'All Tasks' },
+    { path: '/projects', icon: Folder, label: 'Projects' },
     { path: '/calendar', icon: CheckSquare, label: 'Calendar' },
     { path: '/agent', icon: Bot, label: 'AI Agent' },
   ];

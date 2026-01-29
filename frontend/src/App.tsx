@@ -12,6 +12,7 @@ import { TodayPage } from './pages/TodayPage';
 import { KanbanPage } from './pages/KanbanPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { AgentPage } from './pages/AgentPage';
+import { ProjectsPage } from './pages/ProjectsPage';
 
 /**
  * Main App component with routing and authentication.
@@ -84,6 +85,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <CalendarPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projects"
+            element={
+              <ProtectedRoute>
+                <ProjectsPage />
               </ProtectedRoute>
             }
           />

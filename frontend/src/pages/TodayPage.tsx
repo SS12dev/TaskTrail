@@ -38,6 +38,7 @@ export const TodayPage = () => {
   today.setHours(0, 0, 0, 0);
 
   const overdueTasks = tasks.filter((task) => {
+    if (task.status === 'done' || task.status === 'archived') return false;
     if (!task.dueDate) return false;
     const dueDate = new Date(task.dueDate);
     dueDate.setHours(0, 0, 0, 0);
@@ -45,6 +46,7 @@ export const TodayPage = () => {
   });
 
   const dueTodayTasks = tasks.filter((task) => {
+    if (task.status === 'done' || task.status === 'archived') return false;
     if (!task.dueDate) return false;
     const dueDate = new Date(task.dueDate);
     dueDate.setHours(0, 0, 0, 0);
@@ -52,6 +54,7 @@ export const TodayPage = () => {
   });
 
   const highPriorityTasks = tasks.filter((task) => {
+    if (task.status === 'done' || task.status === 'archived') return false;
     const isHighPriority = task.priority === 'high' || task.priority === 'urgent';
     const isNotOverdueOrDueToday = !overdueTasks.includes(task) && !dueTodayTasks.includes(task);
     return isHighPriority && isNotOverdueOrDueToday;

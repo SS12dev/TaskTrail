@@ -12,10 +12,13 @@ import {
   Sparkles,
   Zap,
   Target,
-  BarChart3
+  BarChart3,
+  Download
 } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { PageHeader } from '../components/layout/PageHeader';
+import { MemoryStatsWidget } from '../components/MemoryStatsWidget';
+import { ExportDialog } from '../components/ExportDialog';
 import { useTasks } from '../hooks/useTasks';
 
 /**
@@ -31,6 +34,7 @@ export const DashboardPage = () => {
     inProgress: 0,
     todo: 0,
   });
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchTasks({ includeCompleted: true });
@@ -222,6 +226,22 @@ export const DashboardPage = () => {
           </div>
         </div>
 
+        {/* Memory Stats & Export */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <MemoryStatsWidget />
+          </div>
+          <div className="flex flex-col gap-4">
+            <button
+              onClick={() => setIsExportDialogOpen(true)}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 group"
+            >
+              <Download className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              <span>Export Data</span>
+            </button>
+          </div>
+        </div>
+
         {/* Activity Overview */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Recent Activity Card */}
@@ -307,6 +327,8 @@ export const DashboardPage = () => {
           </div>
         </div>
       </div>
+
+      <ExportDialog isOpen={isExportDialogOpen} onClose={() => setIsExportDialogOpen(false)} />
     </Layout>
   );
 };

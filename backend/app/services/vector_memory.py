@@ -44,7 +44,7 @@ class VectorMemory:
                 # Instantiate a vector store handle without creating the index yet
                 # The Redis vectorstore uses a single index; we'll use metadata filters per user
                 self._redis = RedisVectorStore(
-                    embedding=self._embeddings,
+                    embeddings=self._embeddings,
                     redis_url=settings.redis_url,
                     index_name=settings.redis_index_name,
                 )

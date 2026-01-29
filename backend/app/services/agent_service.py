@@ -37,13 +37,14 @@ class AgentService:
 
         self.agent_system = _agent_systems[user_id]
 
-    async def process_text_message(self, user_id: str, message: str) -> Dict[str, Any]:
+    async def process_text_message(self, user_id: str, message: str, context: Optional[str] = None) -> Dict[str, Any]:
         """
-        Process a text message through the multi-agent system (legacy API).
+        Process a text message through the multi-agent system with conversation context.
 
         Args:
             user_id: The user's ID (for validation)
             message: The user's message
+            context: Optional conversation context from previous messages
 
         Returns:
             Dict containing the response and metadata
@@ -56,8 +57,13 @@ class AgentService:
             }
 
         try:
+            # Prepend context if provided
+            full_message = message
+            if context:
+                full_message = f"{context}\n\nLatest user message: {message}"
+
             # Process through LangGraph multi-agent system
-            response = await self.agent_system.process_message(message)
+            response = await self.agent_system.process_message(full_message)
 
             return {
                 "type": "response",

@@ -36,6 +36,10 @@ export const TaskCard = ({ task, onEdit, onDelete, onClick }: TaskCardProps) => 
     const today = new Date();
     const diffDays = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
+    if (task.status === 'done' || task.status === 'archived') {
+      return { text: dueDate.toLocaleDateString(), color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300' };
+    }
+
     if (diffDays < 0) return { text: 'Overdue', color: 'bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300' };
     if (diffDays === 0) return { text: 'Today', color: 'bg-cyan-100 dark:bg-cyan-950/50 text-cyan-700 dark:text-cyan-300' };
     if (diffDays === 1) return { text: 'Tomorrow', color: 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300' };

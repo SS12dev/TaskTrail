@@ -80,6 +80,13 @@ async def verify_firebase_token(
         )
 
 
+# Backward-compatible dependency for routes expecting verify_token to return UID
+async def verify_token(
+    token_data: Dict[str, Any] = Depends(verify_firebase_token)
+) -> str:
+    return token_data["uid"]
+
+
 async def get_current_user(
     token_data: Dict[str, Any] = Depends(verify_firebase_token)
 ) -> Dict[str, Any]:

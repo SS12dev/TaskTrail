@@ -1,12 +1,14 @@
 """
 Memory Analytics API Routes.
 
-Provides endpoints for memory insights, statistics, and monitoring.
+Provides endpoints for memory insights, statistics, monitoring, and export.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from app.dependencies import verify_token
 from app.services.memory_analytics import MemoryAnalytics
+from app.services.conversation_export import ConversationExporter
 from typing import Dict, Any
 import logging
 
@@ -198,3 +200,140 @@ async def memory_health_check(user_id: str = Depends(verify_token)) -> Dict[str,
             "memory_available": False,
             "error": str(e),
         }
+
+
+@router.get("/export")
+async def export_conversation(
+    format: str = Query("json", regex="^(json|csv|markdown)$"),
+    limit: int = Query(None, ge=1, le=1000),
+    user_id: str = Depends(verify_token)
+) -> Response:
+    """
+    Export conversation history in various formats.
+    
+    Args:
+        format: Export format ('json', 'csv', 'markdown', default: json)
+        limit: Maximum number of messages to export (1-1000, default: all)
+        
+    Returns:
+        File content with appropriate content-type header
+    """
+    try:
+        exporter = ConversationExporter(user_id)
+        
+        if format == "json":
+            content = exporter.export_json(limit=limit, pretty=True)
+            media_type = "application/json"
+            filename = "conversations.json"
+        elif format == "csv":
+            content = exporter.export_csv(limit=limit)
+            media_type = "text/csv"
+            filename = "conversations.csv"
+        elif format == "markdown":
+            content = exporter.export_markdown(limit=limit)
+            media_type = "text/markdown"
+            filename = "conversations.md"
+        else:
+            raise HTTPException(status_code=400, detail="Invalid format")
+        
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting conversation for user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to export conversation")
+
+
+@router.get("/export/project/{project_id}")
+async def export_project_conversation(
+    project_id: str,
+    format: str = Query("json", regex="^(json|csv|markdown)$"),
+    user_id: str = Depends(verify_token)
+) -> Response:
+    """
+    Export conversation history for a specific project.
+    
+    Args:
+        project_id: The project ID
+        format: Export format ('json', 'csv', 'markdown', default: json)
+        
+    Returns:
+        File content with appropriate content-type header
+    """
+    try:
+        exporter = ConversationExporter(user_id)
+        content = exporter.export_by_project(project_id, format=format)
+        
+        if format == "json":
+            media_type = "application/json"
+            filename = f"project-{project_id}.json"
+        elif format == "csv":
+            media_type = "text/csv"
+            filename = f"project-{project_id}.csv"
+        elif format == "markdown":
+            media_type = "text/markdown"
+            filename = f"project-{project_id}.md"
+        else:
+            raise HTTPException(status_code=400, detail="Invalid format")
+        
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting project {project_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to export project conversation")
+
+
+@router.get("/export/task/{task_id}")
+async def export_task_conversation(
+    task_id: str,
+    format: str = Query("json", regex="^(json|csv|markdown)$"),
+    user_id: str = Depends(verify_token)
+) -> Response:
+    """
+    Export conversation history for a specific task.
+    
+    Args:
+        task_id: The task ID
+        format: Export format ('json', 'csv', 'markdown', default: json)
+        
+    Returns:
+        File content with appropriate content-type header
+    """
+    try:
+        exporter = ConversationExporter(user_id)
+        content = exporter.export_by_task(task_id, format=format)
+        
+        if format == "json":
+            media_type = "application/json"
+            filename = f"task-{task_id}.json"
+        elif format == "csv":
+            media_type = "text/csv"
+            filename = f"task-{task_id}.csv"
+        elif format == "markdown":
+            media_type = "text/markdown"
+            filename = f"task-{task_id}.md"
+        else:
+            raise HTTPException(status_code=400, detail="Invalid format")
+        
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error exporting task {task_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to export task conversation")

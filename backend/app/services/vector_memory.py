@@ -82,3 +82,36 @@ class VectorMemory:
         except Exception as e:
             logger.warning(f"VectorMemory search failed: {e}")
             return []
+
+    def filtered_search(self, user_id: str, query: str, project_id: Optional[str] = None, 
+                       task_id: Optional[str] = None, agent_type: Optional[str] = None,
+                       k: int = 5) -> List[Dict[str, Any]]:
+        """Search for similar past context with project/task/agent type filtering."""
+        if not self.enabled or not query:
+            return []
+        try:
+            # Build filter combining user_id and optional metadata filters
+            filter_dict = {"user_id": user_id}
+            if project_id:
+                filter_dict["project_id"] = project_id
+            if task_id:
+                filter_dict["task_id"] = task_id
+            if agent_type:
+                filter_dict["agent_type"] = agent_type
+            
+            results = self._redis.similarity_search_with_score(
+                query,
+                k=k,
+                filter=filter_dict,
+            )
+            formatted = []
+            for doc, score in results:
+                formatted.append({
+                    "text": doc.page_content,
+                    "metadata": doc.metadata or {},
+                    "score": float(score),
+                })
+            return formatted
+        except Exception as e:
+            logger.warning(f"VectorMemory filtered_search failed: {e}")
+            return []

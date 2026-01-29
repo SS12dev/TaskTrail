@@ -57,12 +57,36 @@ async def startup_event():
     """
     try:
         initialize_firebase()
+        
+        # Start background compaction scheduler
+        from app.services.compaction_scheduler import get_compaction_scheduler
+        scheduler = get_compaction_scheduler()
+        scheduler.start()
+        
+        # Schedule global compaction at 3 AM daily
+        scheduler.schedule_global_compaction(hour=3, minute=0)
+        
         logger.info("Application startup completed successfully")
+        logger.info("Background compaction scheduler initialized")
         logger.info(f"Environment: {settings.environment}")
         logger.info(f"Frontend URL: {settings.frontend_url}")
     except Exception as e:
         logger.error(f"Failed to start application: {e}")
         raise
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """
+    Gracefully shutdown background services when the application stops.
+    """
+    try:
+        from app.services.compaction_scheduler import get_compaction_scheduler
+        scheduler = get_compaction_scheduler()
+        scheduler.stop()
+        logger.info("Background compaction scheduler stopped")
+    except Exception as e:
+        logger.warning(f"Error shutting down scheduler: {e}")
 
 
 # Include API routers

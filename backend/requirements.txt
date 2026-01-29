@@ -22,6 +22,9 @@ redis
 langchain-community
 langchain-redis
 
+# Scheduling
+apscheduler
+
 # Testing
 pytest
 pytest-asyncio

@@ -107,23 +107,85 @@ class AgentService:
 
             logger.debug(f"Built user context: {user_context_obj.timezone} - {user_context_obj.current_timestamp}")
 
-            # Build memory context (recent summary + vector recall)
+            # Build memory context (recent summary + vector recall with filtering)
             memory_snippets = []
             try:
                 from app.services.conversation_memory import ConversationMemory
                 from app.services.vector_memory import VectorMemory
+                from app.services.memory_filters import build_memory_context_for_task, build_memory_context_for_project
+                
+                # Extract project/task context if present in state
+                project_id = state.get("project_id")
+                task_id = state.get("task_id")
+                agent_type = state.get("current_agent")
+                
                 conv_mem = ConversationMemory(self.user_id)
-                recent_summary = conv_mem.get_context_summary(max_messages=5)
-                if recent_summary:
-                    memory_snippets.append(recent_summary)
-                # Vector recall from last user message if available
-                last_msg = state.get("messages", [])[-1] if state.get("messages") else None
-                query_text = last_msg.content if hasattr(last_msg, 'content') else (last_msg.get('content') if isinstance(last_msg, dict) else None)
-                if query_text:
+                
+                # Build context using appropriate filter based on scope
+                if task_id and project_id:
+                    # Task-specific memory context
+                    recent_summary = conv_mem.get_context_summary(max_messages=5)
+                    last_msg = state.get("messages", [])[-1] if state.get("messages") else None
+                    query_text = last_msg.content if hasattr(last_msg, 'content') else (last_msg.get('content') if isinstance(last_msg, dict) else None)
+                    
                     vec = VectorMemory()
-                    results = vec.search(self.user_id, query_text, k=3)
-                    if results:
-                        memory_snippets.append("Top relevant history:\n" + "\n".join([f"- {r['text'][:160]}" for r in results]))
+                    vector_results = vec.filtered_search(
+                        self.user_id, 
+                        query_text or "", 
+                        project_id=project_id,
+                        task_id=task_id,
+                        agent_type=agent_type,
+                        k=3
+                    )
+                    
+                    # Use task-aware context builder
+                    task_context = build_memory_context_for_task(
+                        task_id=task_id,
+                        recent_history=recent_summary.split("\n") if recent_summary else [],
+                        vector_results=vector_results
+                    )
+                    if task_context:
+                        memory_snippets.append(task_context)
+                
+                elif project_id:
+                    # Project-specific memory context
+                    recent_summary = conv_mem.get_context_summary(max_messages=5)
+                    last_msg = state.get("messages", [])[-1] if state.get("messages") else None
+                    query_text = last_msg.content if hasattr(last_msg, 'content') else (last_msg.get('content') if isinstance(last_msg, dict) else None)
+                    
+                    vec = VectorMemory()
+                    vector_results = vec.filtered_search(
+                        self.user_id,
+                        query_text or "",
+                        project_id=project_id,
+                        agent_type=agent_type,
+                        k=3
+                    )
+                    
+                    # Use project-aware context builder
+                    project_context = build_memory_context_for_project(
+                        project_id=project_id,
+                        recent_history=recent_summary.split("\n") if recent_summary else [],
+                        vector_results=vector_results
+                    )
+                    if project_context:
+                        memory_snippets.append(project_context)
+                
+                else:
+                    # General memory context (no project/task scope)
+                    recent_summary = conv_mem.get_context_summary(max_messages=5)
+                    if recent_summary:
+                        memory_snippets.append(recent_summary)
+                    
+                    # Vector recall from last user message if available
+                    last_msg = state.get("messages", [])[-1] if state.get("messages") else None
+                    query_text = last_msg.content if hasattr(last_msg, 'content') else (last_msg.get('content') if isinstance(last_msg, dict) else None)
+                    if query_text:
+                        vec = VectorMemory()
+                        results = vec.search(self.user_id, query_text, k=3)
+                        if results:
+                            memory_snippets.append("Top relevant history:\n" + "\n".join([f"- {r['text'][:160]}" for r in results]))
+                
                 # Attach combined memory context
                 if memory_snippets:
                     state["memory_context"] = "\n\n".join(memory_snippets)
@@ -159,14 +221,26 @@ class AgentService:
 
                 if user_msg and assistant_msg:
                     logger.info("Saving conversation to memory")
+                    
+                    # Build metadata with project/task context if available
+                    save_metadata = {
+                        "agents_called": final_state.get("agents_called", []),
+                        "intent": final_state.get("current_intent"),
+                        "action": final_state.get("last_action"),
+                    }
+                    
+                    # Add project/task context to metadata for filtering
+                    if state.get("project_id"):
+                        save_metadata["project_id"] = state.get("project_id")
+                    if state.get("task_id"):
+                        save_metadata["task_id"] = state.get("task_id")
+                    if state.get("current_agent"):
+                        save_metadata["agent_type"] = state.get("current_agent")
+                    
                     self.agent_system.conversation_memory.save_message(
                         user_msg["content"],
                         assistant_msg["content"],
-                        metadata={
-                            "agents_called": final_state.get("agents_called", []),
-                            "intent": final_state.get("current_intent"),
-                            "action": final_state.get("last_action"),
-                        }
+                        metadata=save_metadata
                     )
                     
                     # Auto-compaction: Check if we should compact old messages

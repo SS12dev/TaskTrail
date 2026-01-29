@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.firebase import initialize_firebase
-from app.routes import auth, test, tasks, projects, agent, a2a
+from app.routes import auth, test, tasks, projects, agent, a2a, memory
 from app.models.auth import HealthCheckResponse
 import logging
 
@@ -96,6 +96,7 @@ app.include_router(test.router, prefix="/api/v1")  # Test endpoints at /api/v1/t
 app.include_router(tasks.router, prefix="/api/v1")  # Task endpoints at /api/v1/tasks
 app.include_router(projects.router, prefix="/api/v1")  # Project endpoints at /api/v1/projects
 app.include_router(agent.router, prefix="/api/v1")  # Agent endpoints at /api/v1/agent
+app.include_router(memory.router, prefix="/api/v1")  # Memory analytics endpoints at /api/v1/memory
 
 # Include A2A Protocol routes (NO prefix - uses specific A2A paths)
 # A2A endpoints: /.well-known/agent-card.json, /a2a/v1/messages, /a2a/v1/ws

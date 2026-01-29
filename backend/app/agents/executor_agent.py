@@ -155,10 +155,30 @@ class ExecutorAgent:
             if state.get("task_context", {}).get("subtasks"):
                 context = f"\nNote: User previously planned subtasks: {state['task_context']['subtasks']}"
                 context += "\nConsider creating these subtasks if the user requests it."
+            
+            # Add task-aware context if task_id is in state
+            if state.get("task_id"):
+                context += f"\nCurrent task context: task_id={state['task_id']}"
+                try:
+                    # Try to fetch task details for context
+                    task_tools = TaskTools(self.user_id)
+                    # Add reference to current task ID
+                    context += "\nWhen modifying this task, ensure you use the correct task ID provided above."
+                except Exception as e:
+                    logger.debug(f"Could not load task details: {e}")
+            
+            # Add project-aware context if project_id is in state
+            if state.get("project_id"):
+                context += f"\nCurrent project context: project_id={state['project_id']}"
+                context += "\nConsider creating tasks within this project context."
 
             # Build context-aware system prompt
             system_prompt = PromptBuilder.build_executor_prompt(EXECUTOR_SYSTEM_PROMPT, state)
             system_prompt = PromptBuilder.attach_memory_context(system_prompt, state.get("memory_context"))
+            
+            # Add task/project context to system prompt
+            if context:
+                system_prompt += f"\n\n**Current Context:**{context}"
 
             # Create messages for LLM
             messages = [

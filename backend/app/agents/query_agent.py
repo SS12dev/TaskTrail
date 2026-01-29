@@ -98,6 +98,19 @@ class QueryAgent:
             # Build context-aware query prompt
             system_prompt = PromptBuilder.build_query_prompt(QUERY_SYSTEM_PROMPT, state)
             system_prompt = PromptBuilder.attach_memory_context(system_prompt, state.get("memory_context"))
+            
+            # Add task/project context to improve query results
+            query_context = ""
+            if state.get("project_id"):
+                query_context += f"\nNote: User is currently in project context (project_id={state['project_id']}).\n"
+                query_context += "Consider filtering results to this project if relevant."
+            
+            if state.get("task_id"):
+                query_context += f"\nNote: User is currently viewing task (task_id={state['task_id']}).\n"
+                query_context += "Consider providing related task information when relevant."
+            
+            if query_context:
+                system_prompt += f"\n\n**Current Context:**{query_context}"
 
             # Create messages for LLM
             messages = [

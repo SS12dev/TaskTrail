@@ -1,22 +1,45 @@
-import { useEffect, useState } from 'react';
-import { Folder } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Folder, CheckCircle2, Circle, Clock } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { PageHeader } from '../components/layout/PageHeader';
 import { useProjects } from '../hooks/useProjects';
+import { useTasks } from '../hooks/useTasks';
 import { ExportDialog } from '../components/ExportDialog';
 
-interface ProjectStats {
-  projectId: string;
-  messageCount: number;
-}
-
 export function ProjectsPage() {
-  const { projects, loading, error, createProject, deleteProject } = useProjects();
-  const [projectStats, setProjectStats] = useState<Record<string, ProjectStats>>({});
+  const { projects, loading, error, createProject, deleteProject, fetchProjects } = useProjects();
+  const { tasks, fetchTasks } = useTasks();
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectColor, setNewProjectColor] = useState('blue');
   const [exportProjectId, setExportProjectId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+
+  // Fetch projects and tasks on mount
+  useEffect(() => {
+    fetchProjects();
+    fetchTasks();
+  }, [fetchProjects, fetchTasks]);
+
+  // Group tasks by project
+  const tasksByProject = tasks.reduce((acc, task) => {
+    const projectId = task.projectId || 'unassigned';
+    if (!acc[projectId]) acc[projectId] = [];
+    acc[projectId].push(task);
+    return acc;
+  }, {} as Record<string, typeof tasks>);
+
+  const toggleProjectExpansion = (projectId: string) => {
+    setExpandedProjects(prev => {
+      const next = new Set(prev);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
+  };
 
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) return;
@@ -108,58 +131,116 @@ export function ProjectsPage() {
           </div>
         </div>
 
-        {/* Projects Grid */}
+        {/* Projects List */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-48 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+              <div key={i} className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
             ))}
           </div>
         ) : projects && projects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                className={`rounded-lg border-2 p-6 transition hover:shadow-lg dark:hover:shadow-xl ${colorClasses[project.color as keyof typeof colorClasses] || colorClasses.blue}`}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-4 h-4 rounded-full ${colorDots[project.color as keyof typeof colorDots] || colorDots.blue}`}></div>
-                    <h3 className="font-bold text-lg">{project.name}</h3>
+          <div className="space-y-4">
+            {projects.map((project) => {
+              const projectTasks = tasksByProject[project.id] || [];
+              const isExpanded = expandedProjects.has(project.id);
+              const completedCount = projectTasks.filter(t => t.status === 'done').length;
+              const totalCount = projectTasks.length;
+
+              return (
+                <div
+                  key={project.id}
+                  className={`rounded-lg border-2 transition hover:shadow-lg dark:hover:shadow-xl ${colorClasses[project.color as keyof typeof colorClasses] || colorClasses.blue}`}
+                >
+                  {/* Project Header */}
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <button
+                        onClick={() => toggleProjectExpansion(project.id)}
+                        className="flex items-center gap-3 flex-1 text-left group"
+                      >
+                        <div className={`w-4 h-4 rounded-full ${colorDots[project.color as keyof typeof colorDots] || colorDots.blue}`}></div>
+                        <h3 className="font-bold text-lg">{project.name}</h3>
+                        <span className="text-sm opacity-75">
+                          ({completedCount}/{totalCount} tasks)
+                        </span>
+                        <span className="ml-auto text-sm opacity-50 group-hover:opacity-100 transition">
+                          {isExpanded ? '▼' : '▶'}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteProject(project.id)}
+                        className="text-sm opacity-70 hover:opacity-100 transition ml-4"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    {project.description && (
+                      <p className="text-sm opacity-75 mb-3 ml-7">{project.description}</p>
+                    )}
+
+                    <div className="flex gap-2 ml-7">
+                      <button
+                        onClick={() => setExportProjectId(project.id)}
+                        className="px-3 py-2 text-xs font-medium bg-white/20 hover:bg-white/30 rounded transition"
+                      >
+                        Export
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => handleDeleteProject(project.id)}
-                    className="text-sm opacity-70 hover:opacity-100 transition"
-                  >
-                    ✕
-                  </button>
-                </div>
 
-                {project.description && (
-                  <p className="text-sm opacity-75 mb-3">{project.description}</p>
-                )}
+                  {/* Tasks List (Collapsible) */}
+                  {isExpanded && projectTasks.length > 0 && (
+                    <div className="px-6 pb-6 space-y-2">
+                      <div className="border-t border-current/20 pt-4">
+                        <h4 className="text-sm font-semibold mb-3 opacity-75">Tasks:</h4>
+                        {projectTasks.map((task) => (
+                          <div
+                            key={task.id}
+                            className="flex items-center gap-3 p-3 bg-white/10 dark:bg-black/10 rounded-lg"
+                          >
+                            {task.status === 'done' ? (
+                              <CheckCircle2 className="w-4 h-4 shrink-0 text-green-600 dark:text-green-400" />
+                            ) : task.status === 'in_progress' ? (
+                              <Clock className="w-4 h-4 shrink-0 text-yellow-600 dark:text-yellow-400" />
+                            ) : (
+                              <Circle className="w-4 h-4 shrink-0 opacity-50" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium truncate">{task.title}</div>
+                              {task.description && (
+                                <div className="text-xs opacity-75 truncate">{task.description}</div>
+                              )}
+                            </div>
+                            <div className="text-xs opacity-75 shrink-0">
+                              {task.priority === 'high' && '🔴'}
+                              {task.priority === 'medium' && '🟡'}
+                              {task.priority === 'low' && '🟢'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                <div className="text-xs opacity-75 mb-4">
-                  {projectStats[project.id]?.messageCount || 0} messages
+                  {/* No tasks message */}
+                  {isExpanded && projectTasks.length === 0 && (
+                    <div className="px-6 pb-6">
+                      <div className="border-t border-current/20 pt-4">
+                        <p className="text-sm opacity-75 italic">
+                          No tasks yet. Ask the AI agent to create tasks for this project!
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setExportProjectId(project.id)}
-                    className="flex-1 px-3 py-2 text-xs font-medium bg-white/20 hover:bg-white/30 rounded transition"
-                  >
-                    Export
-                  </button>
-                  <button className="flex-1 px-3 py-2 text-xs font-medium bg-white/20 hover:bg-white/30 rounded transition">
-                    View Tasks
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-600 dark:text-gray-400 mb-4">No projects yet. Create one to get started!</p>
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+            <Folder className="w-16 h-16 mx-auto mb-4 opacity-50" />
+            <p>No projects yet. Create your first project above!</p>
           </div>
         )}
       </div>

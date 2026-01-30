@@ -1,21 +1,56 @@
 # TaskTrail - AI-Powered Task Management
 
-A modern, full-stack task management application with AI-powered assistance using multi-agent systems, real-time collaboration, and responsive design.
+A modern, full-stack task management application with AI-powered assistance using multi-agent systems, real-time collaboration, and comprehensive admin dashboard.
+
+## 🚀 Quick Start
+
+Get started in 5 minutes with Docker:
+
+```bash
+# 1. Clone and setup
+git clone <repo-url> && cd TaskTrail
+cp backend/.env.example backend/.env
+
+# 2. Configure .env with Firebase & OpenAI credentials
+# 3. Start all services
+docker compose up --build
+
+# 4. Create admin account
+docker compose exec api python create_super_admin.py admin@example.com Password123!
+
+# 5. Access applications
+# Frontend: http://localhost:5173
+# API Docs: http://localhost:8000/docs
+# Admin: http://localhost:3001
+```
+
+📖 **Full guide:** [docs/QUICK_START.md](docs/QUICK_START.md)
+
+📚 **Docs index:** [docs/README.md](docs/README.md)
+
+---
 
 ## 🌟 Features
 
-- **Authentication & Authorization**: Secure Firebase authentication
+### Core Features
+- **Authentication & Authorization**: Secure Firebase authentication with role-based access control
 - **Task Management**: Create, update, delete, and organize tasks with priorities and due dates
 - **Project Management**: Organize tasks into projects with full CRUD operations
-- **AI-Powered Assistance**: Multi-agent system for intelligent task suggestions and planning
-- **Multiple Views**: 
-  - Dashboard for overview
-  - Calendar view for deadline tracking
-  - Kanban board for task organization
-  - Today view for daily focus
+- **AI-Powered Assistance**: Multi-agent system (LangGraph + OpenAI GPT-4) for intelligent task planning
+- **Multiple Views**: Dashboard, Calendar, Kanban board, Today view
 - **Real-time Updates**: WebSocket support for live collaboration
 - **Theme Support**: Dark and light themes with persistent storage
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
+
+### Admin Dashboard (New! ⭐)
+- **User Management**: View, edit, suspend, and delete user accounts
+- **Token Tracking**: Real-time OpenAI token usage monitoring per user
+- **Analytics**: System overview, top users, usage trends
+- **Configuration**: Manage API keys, tier limits, feature flags
+- **Audit Logging**: Complete audit trail of admin actions
+- **RBAC**: Role-based permissions (super_admin, admin, support)
+
+📖 **Admin Guide:** [docs/ADMIN_DASHBOARD_GUIDE.md](docs/ADMIN_DASHBOARD_GUIDE.md)
 
 ## 📋 Project Structure
 
@@ -59,7 +94,7 @@ TaskTrail/
 │   ├── tailwind.config.js       # Tailwind CSS configuration
 │   └── tsconfig.json            # TypeScript configuration
 │
-└── docs/                         # Documentation (future)
+└── docs/                         # Documentation (active)
 ```
 
 ## 🔧 Tech Stack
@@ -69,7 +104,7 @@ TaskTrail/
 - **Server**: Uvicorn
 - **AI/ML**: LangChain, LangGraph, OpenAI
 - **Authentication**: Firebase Admin SDK
-- **Database**: Firebase Realtime Database
+- **Database**: Firebase Firestore
 - **Language**: Python 3.x
 
 ### Frontend
@@ -78,6 +113,13 @@ TaskTrail/
 - **Build Tool**: Vite 7
 - **Styling**: Tailwind CSS 4
 - **State Management**: Zustand
+
+## 📚 Documentation
+
+Key references are now consolidated under the docs folder:
+- [docs/BACKEND_OVERVIEW.md](docs/BACKEND_OVERVIEW.md)
+- [docs/BACKEND_SUMMARY_FOR_FRONTEND.md](docs/BACKEND_SUMMARY_FOR_FRONTEND.md)
+- [docs/API_REFERENCE.md](docs/API_REFERENCE.md)
 - **UI Components**: Lucide React (icons)
 - **Drag & Drop**: dnd-kit
 - **Routing**: React Router v7

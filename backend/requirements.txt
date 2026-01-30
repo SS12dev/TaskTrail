@@ -16,6 +16,8 @@ openai
 
 # Additional utilities
 tiktoken
+pytz
+email-validator
 
 # Vector memory + Redis
 redis
@@ -28,3 +30,5 @@ apscheduler
 # Testing
 pytest
 pytest-asyncio
+pytest-cov
+httpx

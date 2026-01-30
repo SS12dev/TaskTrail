@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import api, { apiCall } from '../services/api';
 
 export interface MemoryStats {
@@ -42,7 +42,7 @@ export function useMemoryAnalytics() {
     setError(null);
     try {
       const data = await apiCall('/api/v1/memory/stats', { method: 'GET' });
-      setStats(data);
+      setStats(data as MemoryStats);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch stats');
     } finally {
@@ -55,7 +55,7 @@ export function useMemoryAnalytics() {
     setError(null);
     try {
       const data = await apiCall(`/api/v1/memory/timeline?days=${days}`, { method: 'GET' });
-      setTimeline(data);
+      setTimeline(data as MemoryTimeline);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch timeline');
     } finally {
@@ -68,7 +68,7 @@ export function useMemoryAnalytics() {
     setError(null);
     try {
       const data = await apiCall('/api/v1/memory/agents', { method: 'GET' });
-      setAgents(data);
+      setAgents(data as AgentStats);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch agent stats');
     } finally {

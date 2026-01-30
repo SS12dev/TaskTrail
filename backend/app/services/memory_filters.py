@@ -17,50 +17,6 @@ class ProjectTaskMemoryFilter:
     """Filters conversation history by projects and tasks."""
     
     @staticmethod
-    def add_project_context(metadata: Dict[str, Any], project_id: str, project_name: str) -> Dict[str, Any]:
-        """
-        Add project context to conversation metadata.
-        
-        Args:
-            metadata: Existing metadata dictionary
-            project_id: The project ID
-            project_name: The project name
-            
-        Returns:
-            Updated metadata with project context
-        """
-        updated = metadata.copy() if metadata else {}
-        updated["project_id"] = project_id
-        updated["project_name"] = project_name
-        return updated
-    
-    @staticmethod
-    def add_task_context(
-        metadata: Dict[str, Any], 
-        task_id: str, 
-        task_name: str, 
-        project_id: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        Add task context to conversation metadata.
-        
-        Args:
-            metadata: Existing metadata dictionary
-            task_id: The task ID
-            task_name: The task name
-            project_id: Optional project ID if task is in a project
-            
-        Returns:
-            Updated metadata with task context
-        """
-        updated = metadata.copy() if metadata else {}
-        updated["task_id"] = task_id
-        updated["task_name"] = task_name
-        if project_id:
-            updated["project_id"] = project_id
-        return updated
-    
-    @staticmethod
     def filter_by_project(
         conversations: List[Dict[str, Any]], 
         project_id: str
@@ -98,26 +54,6 @@ class ProjectTaskMemoryFilter:
         return [
             conv for conv in conversations 
             if conv.get("metadata", {}).get("task_id") == task_id
-        ]
-    
-    @staticmethod
-    def filter_by_agent_type(
-        conversations: List[Dict[str, Any]], 
-        agent_type: str
-    ) -> List[Dict[str, Any]]:
-        """
-        Filter conversation history by agent that processed it.
-        
-        Args:
-            conversations: List of conversation records
-            agent_type: The agent type (planner, executor, query, conversation)
-            
-        Returns:
-            Filtered list of conversations
-        """
-        return [
-            conv for conv in conversations
-            if agent_type in conv.get("metadata", {}).get("agents_called", [])
         ]
 
 

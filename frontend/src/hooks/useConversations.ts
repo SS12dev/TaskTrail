@@ -75,12 +75,12 @@ export const useConversations = () => {
   }, []);
 
   const sendMessage = useCallback(
-    async (message: string): Promise<string> => {
+    async (message: string, conversationIdOverride?: string): Promise<string> => {
       try {
         setError(null);
 
         // Create conversation if this is first message
-        let conversationId = currentConversation?.id;
+        let conversationId = conversationIdOverride || currentConversation?.id;
         if (!conversationId) {
           conversationId = await createConversation();
         }
@@ -91,32 +91,38 @@ export const useConversations = () => {
           conversation_id: conversationId
         });
 
-        // Add messages to local state
-        const updatedConversation = currentConversation || {
-          id: conversationId,
-          title: 'New Conversation',
-          messages: [],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          archived: false,
-          metadata: {}
-        };
+        // Add messages to local state (functional update to avoid stale state)
+        setCurrentConversation((prev) => {
+          const base = prev && prev.id === conversationId
+            ? prev
+            : {
+                id: conversationId,
+                title: prev?.title ?? 'New Conversation',
+                messages: [],
+                created_at: prev?.created_at ?? new Date().toISOString(),
+                updated_at: prev?.updated_at ?? new Date().toISOString(),
+                archived: false,
+                metadata: {}
+              };
 
-        updatedConversation.messages.push(
-          {
-            role: 'user',
-            content: message,
-            timestamp: new Date().toISOString()
-          },
-          {
-            role: 'assistant',
-            content: response.data.message,
-            timestamp: new Date().toISOString()
-          }
-        );
-
-        updatedConversation.updated_at = new Date().toISOString();
-        setCurrentConversation(updatedConversation);
+          return {
+            ...base,
+            messages: [
+              ...base.messages,
+              {
+                role: 'user',
+                content: message,
+                timestamp: new Date().toISOString()
+              },
+              {
+                role: 'assistant',
+                content: response.data.message,
+                timestamp: new Date().toISOString()
+              }
+            ],
+            updated_at: new Date().toISOString()
+          };
+        });
 
         return response.data.message;
       } catch (err: any) {

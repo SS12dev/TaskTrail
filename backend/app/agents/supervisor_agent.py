@@ -23,13 +23,19 @@ Your job is to analyze the user's message and route it to the most appropriate s
   - Examples: "Break down 'Launch website' into steps", "Help me plan my week", "What tasks are needed for..."
 
 - **executor**: For creating, updating, or deleting tasks/projects
-  - Examples: "Create a task", "Mark task as done", "Delete my old tasks", "Update priority"
+  - Examples: "Create a task", "Mark task as done", "Delete my old tasks", "Update priority", "Create a project"
+  - **Important**: Route to executor when users want to create multiple related tasks - suggest creating a project first!
 
 - **query**: For searching, filtering, and getting insights about tasks
   - Examples: "Show my high priority tasks", "What's due today?", "Find tasks about...", "How many tasks..."
 
 - **conversation**: For general help, questions about capabilities, greetings, unclear requests
   - Examples: "Hello", "What can you do?", "Help me understand", general conversation
+
+**Project Organization Philosophy:**
+- Projects are MAIN FOLDERS that contain related tasks
+- Always consider if related tasks should be grouped in a project
+- Suggest project creation for any multi-task workflow
 
 **Instructions:**
 - Analyze the user's intent carefully
@@ -43,9 +49,9 @@ Use the user's current time/timezone when interpreting time-related requests (e.
 
 Respond with JSON:
 {{
-  "agent": "planner|executor|query|conversation",
-  "reasoning": "Why this agent is most appropriate",
-  "confidence": "high|medium|low"
+    "agent": "planner|executor|query|conversation",
+    "reasoning": "Why this agent is most appropriate",
+    "confidence": "high|medium|low"
 }}
 """
 
@@ -68,8 +74,8 @@ class SupervisorAgent:
 
         self.chain = self.prompt | self.llm
 
-    def _get_system_prompt(self, state: AgentState) -> str:
-        """Build system prompt with user context."""
+    def _get_user_context(self, state: AgentState) -> str:
+        """Build user context string for the supervisor prompt."""
         context_str = ""
         if state.get("detailed_user_context"):
             ctx = state["detailed_user_context"]
@@ -85,7 +91,7 @@ class SupervisorAgent:
         else:
             context_str = "UTC, no specific context"
 
-        return SUPERVISOR_SYSTEM_PROMPT.format(user_context=context_str)
+        return context_str
 
     async def route(self, state: AgentState) -> dict:
         """
@@ -116,21 +122,14 @@ class SupervisorAgent:
             # Build context from recent messages
             context = self._build_context(state["messages"][-5:])
 
-            # Get context-aware system prompt
-            system_prompt = self._get_system_prompt(state)
-
-            # Create prompt with context
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", system_prompt),
-                ("human", "User message: {message}\n\nRecent context: {context}\n\nRoute this request.")
-            ])
-
-            chain = prompt | self.llm
+            # Build user context for prompt
+            user_context = self._get_user_context(state)
 
             # Call LLM to route
-            response = await chain.ainvoke({
+            response = await self.chain.ainvoke({
                 "message": user_message,
-                "context": context
+                "context": context,
+                "user_context": user_context
             })
 
             # Parse response

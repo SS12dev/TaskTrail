@@ -15,7 +15,7 @@ export function MemoryStatsWidget() {
 
   if (authLoading) {
     return (
-      <div className="rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 p-4">
+      <div className="rounded-lg bg-linear-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 p-4">
         <div className="animate-pulse space-y-2">
           <div className="h-4 bg-gray-300 rounded w-3/4"></div>
           <div className="h-3 bg-gray-300 rounded w-1/2"></div>
@@ -26,7 +26,7 @@ export function MemoryStatsWidget() {
 
   if (loading) {
     return (
-      <div className="rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 p-4">
+      <div className="rounded-lg bg-linear-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 p-4">
         <div className="animate-pulse space-y-2">
           <div className="h-4 bg-gray-300 rounded w-3/4"></div>
           <div className="h-3 bg-gray-300 rounded w-1/2"></div>
@@ -44,7 +44,7 @@ export function MemoryStatsWidget() {
   }
 
   return (
-    <div className="rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 p-4">
+    <div className="rounded-lg bg-linear-to-br from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 p-4">
       <div className="space-y-3">
         <div className="flex justify-between items-start">
           <h3 className="font-semibold text-gray-900 dark:text-white">Memory Stats</h3>

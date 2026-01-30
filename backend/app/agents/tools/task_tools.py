@@ -9,59 +9,11 @@ from langchain_core.tools import tool
 from typing import Optional, List, Literal
 from app.services.task_service import TaskService
 from app.models.task import TaskCreate, TaskUpdate
+from app.utils.date_parser import parse_date_string
 from datetime import datetime, timedelta
 import logging
 
 logger = logging.getLogger(__name__)
-
-def _parse_date_string(date_str: Optional[str]) -> Optional[datetime]:
-    """Parse date string in various formats to datetime object.
-    
-    Handles:
-    - ISO format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS
-    - Natural language: "tomorrow", "next week", "next friday"
-    
-    Args:
-        date_str: Date string to parse
-        
-    Returns:
-        datetime object or None if unparseable
-    """
-    if not date_str:
-        return None
-        
-    date_str = date_str.lower().strip()
-    today = datetime.now().date()
-    
-    # Try ISO format first
-    try:
-        return datetime.fromisoformat(date_str)
-    except:
-        pass
-    
-    # Handle natural language dates
-    if "tomorrow" in date_str:
-        return datetime.combine(today + timedelta(days=1), datetime.min.time())
-    elif "today" in date_str:
-        return datetime.combine(today, datetime.min.time())
-    elif "next week" in date_str:
-        return datetime.combine(today + timedelta(days=7), datetime.min.time())
-    elif "next" in date_str and any(day in date_str for day in ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]):
-        weekday_map = {"monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3, "friday": 4, "saturday": 5, "sunday": 6}
-        for day_name, day_num in weekday_map.items():
-            if day_name in date_str:
-                days_ahead = day_num - today.weekday()
-                if days_ahead <= 0:
-                    days_ahead += 7
-                return datetime.combine(today + timedelta(days=days_ahead), datetime.min.time())
-    elif "in 3" in date_str or "3 days" in date_str:
-        return datetime.combine(today + timedelta(days=3), datetime.min.time())
-    elif "in 7" in date_str or "week" in date_str:
-        return datetime.combine(today + timedelta(days=7), datetime.min.time())
-    
-    # Default fallback - return current datetime
-    logger.warning(f"Could not parse date: {date_str}, using current datetime")
-    return datetime.now()
 
 
 class TaskTools:
@@ -186,7 +138,7 @@ class TaskTools:
             """Create a new task in the user's task list."""
             try:
                 # Parse the due date using flexible parsing
-                parsed_due_date = _parse_date_string(due_date) if due_date else None
+                parsed_due_date = parse_date_string(due_date) if due_date else None
                 
                 task_data = TaskCreate(
                     title=title,
@@ -229,7 +181,7 @@ class TaskTools:
                 if status: updates["status"] = status
                 if priority: updates["priority"] = priority
                 if due_date: 
-                    parsed_date = _parse_date_string(due_date)
+                    parsed_date = parse_date_string(due_date)
                     if parsed_date:
                         updates["dueDate"] = parsed_date
 

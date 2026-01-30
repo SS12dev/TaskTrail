@@ -21,6 +21,7 @@ except ImportError:
     REDIS_AVAILABLE = False
 
 from app.firebase import get_firestore_client
+from app.config import settings
 
 
 class ConversationService:
@@ -43,11 +44,10 @@ class ConversationService:
         
         # Redis setup for fast retrieval
         self.redis_client = None
-        if REDIS_AVAILABLE:
+        if REDIS_AVAILABLE and settings.redis_url:
             try:
-                self.redis_client = redis.Redis(
-                    host="localhost",
-                    port=6379,
+                self.redis_client = redis.Redis.from_url(
+                    settings.redis_url,
                     db=1,  # Use db 1 for conversations
                     decode_responses=True
                 )
@@ -122,6 +122,33 @@ class ConversationService:
             logger.error(f"Error creating conversation: {e}")
             raise
 
+    def update_conversation_title(self, conversation_id: str, title: str) -> None:
+        """
+        Update conversation title.
+
+        Args:
+            conversation_id: ID of the conversation
+            title: New title for the conversation
+        """
+        try:
+            conv_ref = self.user_conversations_ref.document(conversation_id)
+            conv_ref.update({
+                "title": title,
+                "updated_at": firestore.SERVER_TIMESTAMP
+            })
+            
+            # Invalidate Redis cache
+            if self.redis_client:
+                try:
+                    self.redis_client.delete(self._get_redis_key(conversation_id))
+                except Exception as e:
+                    logger.warning(f"Failed to invalidate Redis cache: {e}")
+            
+            logger.info(f"Updated conversation {conversation_id} title to: {title}")
+        except Exception as e:
+            logger.error(f"Error updating conversation title: {e}")
+            # Don't raise - title update failure shouldn't break message sending
+
     def add_message(
         self,
         conversation_id: str,
@@ -143,7 +170,7 @@ class ConversationService:
             message = {
                 "role": role,
                 "content": content,
-                "timestamp": firestore.SERVER_TIMESTAMP,
+                "timestamp": timestamp,  # Use actual datetime, not SERVER_TIMESTAMP
                 "metadata": metadata or {}
             }
 
@@ -156,6 +183,17 @@ class ConversationService:
             })
 
             logger.info(f"Added {role} message to conversation {conversation_id}")
+
+            # If this is the first user message and title is still "New Conversation", auto-generate title
+            if role == "user":
+                conversation = self.get_conversation(conversation_id)
+                if conversation and conversation.get("title") == "New Conversation":
+                    # Generate title from first 60 chars of user message
+                    title = content[:60].strip()
+                    if len(content) > 60:
+                        title += "..."
+                    # Update title (non-blocking if fails)
+                    self.update_conversation_title(conversation_id, title)
 
             # Invalidate Redis cache so next fetch gets fresh data
             if self.redis_client:
@@ -232,19 +270,30 @@ class ConversationService:
             List of conversations with messages excluded (for quick loading)
         """
         try:
-            query = self.user_conversations_ref.where("archived", "==", archived)
-            query = query.order_by("updated_at", direction=firestore.Query.DESCENDING)
-            query = query.limit(limit)
+            # Avoid composite index requirement by ordering only, then filtering in memory
+            query = self.user_conversations_ref.order_by(
+                "updated_at",
+                direction=firestore.Query.DESCENDING
+            ).limit(max(limit * 3, limit))
 
             conversations = []
             for doc in query.stream():
                 conv = doc.to_dict()
+
+                # Filter archived flag in memory
+                if conv.get("archived", False) != archived:
+                    continue
+
                 # Don't include full message list for list view
                 if "messages" in conv:
                     message_count = len(conv["messages"])
                     conv["messages"] = []  # Empty for list view
                     conv["message_count"] = message_count
+
                 conversations.append(conv)
+
+                if len(conversations) >= limit:
+                    break
 
             logger.info(f"Retrieved {len(conversations)} conversations for user {self.user_id}")
             return conversations

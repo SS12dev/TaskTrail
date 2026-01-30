@@ -13,6 +13,41 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Color name to hex code mapping (matches frontend Tailwind colors)
+COLOR_MAP = {
+    "blue": "#3B82F6",
+    "purple": "#9333EA",
+    "pink": "#EC4899",
+    "red": "#EF4444",
+    "orange": "#F97316",
+    "yellow": "#EAB308",
+    "green": "#10B981",
+    "teal": "#14B8A6",
+    "cyan": "#06B6D4",
+    "indigo": "#6366F1",
+    "violet": "#8B5CF6",
+    "gray": "#6B7280",
+}
+
+
+def normalize_color(color: str) -> str:
+    """
+    Convert color names to hex codes.
+    
+    Args:
+        color: Color name (e.g., "purple") or hex code (e.g., "#9333EA")
+        
+    Returns:
+        Hex code string
+    """
+    # If already a hex code, return as-is
+    if color.startswith("#"):
+        return color
+    
+    # Convert to lowercase and lookup
+    color_lower = color.lower()
+    return COLOR_MAP.get(color_lower, "#3B82F6")  # Default to blue
+
 
 class ProjectTools:
     """LangChain tools for project operations."""
@@ -45,17 +80,20 @@ class ProjectTools:
             Args:
                 name: Project name (required)
                 description: Project description
-                color: Hex color code
+                color: Color name (blue, purple, pink, red, orange, yellow, green, etc.) or hex code
                 icon: Lucide icon name
 
             Returns:
                 Created project with ID
             """
             try:
+                # Normalize color (convert names to hex)
+                normalized_color = normalize_color(color)
+                
                 project_data = ProjectCreate(
                     name=name,
                     description=description,
-                    color=color,
+                    color=normalized_color,
                     icon=icon
                 )
 

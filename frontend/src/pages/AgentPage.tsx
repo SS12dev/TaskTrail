@@ -116,13 +116,8 @@ export const AgentPage = () => {
     setIsLoading(true);
 
     try {
-      // Create conversation if none exists
-      if (!currentConversation) {
-        await createConversation();
-      }
-
       // Send message through conversation service
-      const response = await sendMessage(userInput);
+      const response = await sendMessage(userInput, currentConversation?.id);
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -224,7 +219,7 @@ export const AgentPage = () => {
                   }`}
                 >
                   {message.role === 'assistant' && (
-                    <div className="shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center">
+                    <div className="shrink-0 w-8 h-8 rounded-full bg-linear-to-br from-purple-500 to-cyan-500 flex items-center justify-center">
                       <Bot className="w-5 h-5 text-white" />
                     </div>
                   )}
@@ -232,7 +227,7 @@ export const AgentPage = () => {
                   <div
                     className={`max-w-[70%] rounded-2xl px-4 py-3 ${
                       message.role === 'user'
-                        ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white'
+                        ? 'bg-linear-to-r from-violet-600 to-purple-600 text-white'
                         : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700'
                     }`}
                   >
@@ -261,7 +256,7 @@ export const AgentPage = () => {
 
               {isLoading && (
                 <div className="flex gap-3 justify-start">
-                  <div className="shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center">
+                  <div className="shrink-0 w-8 h-8 rounded-full bg-linear-to-br from-purple-500 to-cyan-500 flex items-center justify-center">
                     <Bot className="w-5 h-5 text-white" />
                   </div>
                   <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3">
@@ -313,7 +308,7 @@ export const AgentPage = () => {
                   <button
                     onClick={handleSend}
                     disabled={!input.trim() || isLoading}
-                    className="px-6 py-3 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center gap-2"
+                    className="px-6 py-3 bg-linear-to-r from-violet-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none flex items-center gap-2"
                   >
                     {isLoading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />

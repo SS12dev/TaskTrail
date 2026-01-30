@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MessageSquare, Plus, Trash2, Archive } from 'lucide-react';
-import api from '../services/api';
+import api from '../../services/api';
 
 interface Conversation {
   id: string;
@@ -95,7 +95,7 @@ export const ConversationList = ({ onSelectConversation, currentConversationId }
         </h2>
         <button
           onClick={handleCreateNew}
-          className="w-full px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2 font-medium"
+          className="w-full px-4 py-2 bg-linear-to-r from-violet-600 to-purple-600 text-white rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2 font-medium"
         >
           <Plus className="w-4 h-4" />
           New Chat

@@ -234,7 +234,7 @@ export const DashboardPage = () => {
           <div className="flex flex-col gap-4">
             <button
               onClick={() => setIsExportDialogOpen(true)}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 group"
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 group"
             >
               <Download className="w-5 h-5 group-hover:scale-110 transition-transform" />
               <span>Export Data</span>

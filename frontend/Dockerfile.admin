@@ -1,0 +1,19 @@
+# Admin Frontend development
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy application code
+COPY . .
+
+# Expose Vite dev server port
+EXPOSE 3000
+
+# Run development server on port 3000 for admin with admin config
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000", "--config", "vite.admin.config.ts"]

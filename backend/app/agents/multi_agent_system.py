@@ -16,11 +16,50 @@ from app.services.conversation_memory import ConversationMemory
 from app.services.user_preferences import UserPreferences
 from app.services.task_service import TaskService
 from app.services.project_service import ProjectService
+from app.services.token_tracker import get_token_tracker
+from app.config import settings
 from typing import Literal
 from datetime import datetime
+from langchain_core.callbacks import BaseCallbackHandler
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class TokenTrackingCallback(BaseCallbackHandler):
+    """Callback handler to track OpenAI token usage."""
+    
+    def __init__(self, user_id: str):
+        """Initialize callback with user ID for tracking."""
+        super().__init__()
+        self.user_id = user_id
+        self.total_tokens = 0
+        self.model_name = settings.openai_model
+        
+    def on_llm_end(self, response, **kwargs):
+        """Track token usage when LLM call completes."""
+        try:
+            # Extract token usage from response
+            if hasattr(response, 'llm_output') and response.llm_output:
+                token_usage = response.llm_output.get('token_usage', {})
+                total_tokens = token_usage.get('total_tokens', 0)
+                
+                if total_tokens > 0:
+                    self.total_tokens += total_tokens
+                    
+                    # Record usage in token tracker
+                    tracker = get_token_tracker()
+                    tracker.record_usage(
+                        user_id=self.user_id,
+                        tokens=total_tokens,
+                        model=self.model_name
+                    )
+                    
+                    logger.info(f"Tracked {total_tokens} tokens for user {self.user_id} (model: {self.model_name})")
+                    
+        except Exception as e:
+            logger.error(f"Error tracking token usage: {str(e)}", exc_info=True)
+            # Don't fail the request if tracking fails
 
 
 class MultiAgentSystem:
@@ -40,6 +79,9 @@ class MultiAgentSystem:
         self.user_prefs = UserPreferences(user_id)
         self.task_service = TaskService()
         self.project_service = ProjectService()
+        
+        # Initialize token tracking callback
+        self.token_callback = TokenTrackingCallback(user_id)
 
         # Initialize agents
         self.supervisor = SupervisorAgent()
@@ -203,8 +245,12 @@ class MultiAgentSystem:
 
             # Run through graph
             logger.info(f"Processing message through LangGraph for user {self.user_id}")
-            final_state = await self.compiled_graph.ainvoke(initial_state)
+            final_state = await self.compiled_graph.ainvoke(
+                initial_state,
+                config={"callbacks": [self.token_callback]}
+            )
             logger.info(f"LangGraph processing completed. Agents called: {final_state.get('agents_called', [])}")
+            logger.info(f"Total tokens used: {self.token_callback.total_tokens}")
 
             # Extract response from LangChain message object
             last_message = final_state["messages"][-1]

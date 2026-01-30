@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.firebase import initialize_firebase
-from app.routes import auth, test, tasks, projects, agent, a2a, memory
+from app.routes import auth, test, tasks, projects, agent, a2a, memory, dev, admin
 from app.models.auth import HealthCheckResponse
 import logging
 
@@ -58,16 +58,21 @@ async def startup_event():
     try:
         initialize_firebase()
         
-        # Start background compaction scheduler
-        from app.services.compaction_scheduler import get_compaction_scheduler
-        scheduler = get_compaction_scheduler()
-        scheduler.start()
-        
-        # Schedule global compaction at 3 AM daily
-        scheduler.schedule_global_compaction(hour=3, minute=0)
+        # Start background compaction scheduler (optional)
+        try:
+            from app.services.compaction_scheduler import get_compaction_scheduler
+            scheduler = get_compaction_scheduler()
+            scheduler.start()
+            
+            # Schedule global compaction at 3 AM daily
+            scheduler.schedule_global_compaction(hour=3, minute=0)
+            logger.info("Background compaction scheduler initialized")
+        except ImportError:
+            logger.warning("APScheduler not installed - background compaction scheduler disabled")
+        except Exception as e:
+            logger.warning(f"Failed to initialize compaction scheduler: {e}")
         
         logger.info("Application startup completed successfully")
-        logger.info("Background compaction scheduler initialized")
         logger.info(f"Environment: {settings.environment}")
         logger.info(f"Frontend URL: {settings.frontend_url}")
     except Exception as e:
@@ -97,6 +102,8 @@ app.include_router(tasks.router, prefix="/api/v1")  # Task endpoints at /api/v1/
 app.include_router(projects.router, prefix="/api/v1")  # Project endpoints at /api/v1/projects
 app.include_router(agent.router, prefix="/api/v1")  # Agent endpoints at /api/v1/agent
 app.include_router(memory.router, prefix="/api/v1")  # Memory analytics endpoints at /api/v1/memory
+app.include_router(dev.router, prefix="/api/v1")  # Dev/testing endpoints at /api/v1/dev
+app.include_router(admin.router, prefix="/api/v1")  # Admin endpoints at /api/v1/admin
 
 # Include A2A Protocol routes (NO prefix - uses specific A2A paths)
 # A2A endpoints: /.well-known/agent-card.json, /a2a/v1/messages, /a2a/v1/ws

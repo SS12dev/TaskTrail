@@ -13,50 +13,10 @@ from app.agents.prompt_builder import PromptBuilder
 from app.agents.tools.task_tools import TaskTools
 from app.agents.tools.project_tools import ProjectTools
 from app.config import settings
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
-
-def _parse_relative_date(date_string: str) -> str:
-    """Parse relative date strings to ISO format (YYYY-MM-DD).
-    
-    Args:
-        date_string: Date string like "tomorrow", "next week", "next friday"
-        
-    Returns:
-        ISO formatted date string
-    """
-    today = datetime.now().date()
-    date_string = date_string.lower().strip()
-    
-    if "tomorrow" in date_string:
-        return (today + timedelta(days=1)).isoformat()
-    elif "today" in date_string:
-        return today.isoformat()
-    elif "next week" in date_string:
-        return (today + timedelta(days=7)).isoformat()
-    elif "next" in date_string and any(day in date_string for day in ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]):
-        # Find next occurrence of specified day
-        weekday_map = {"monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3, "friday": 4, "saturday": 5, "sunday": 6}
-        for day_name, day_num in weekday_map.items():
-            if day_name in date_string:
-                days_ahead = day_num - today.weekday()
-                if days_ahead <= 0:
-                    days_ahead += 7
-                return (today + timedelta(days=days_ahead)).isoformat()
-    elif "in 3 days" in date_string or "3 days" in date_string:
-        return (today + timedelta(days=3)).isoformat()
-    elif "in 7 days" in date_string or "week" in date_string:
-        return (today + timedelta(days=7)).isoformat()
-    else:
-        # Try to parse as ISO format if already in YYYY-MM-DD format
-        try:
-            datetime.fromisoformat(date_string)
-            return date_string
-        except:
-            # Default to 3 days from now if unparseable
-            return (today + timedelta(days=3)).isoformat()
 
 EXECUTOR_SYSTEM_PROMPT = """You are a task execution assistant for TaskTrail.
 
@@ -66,6 +26,13 @@ Your role is to TAKE ACTION and perform task operations based on user requests:
 - Delete tasks
 - Create projects for organization
 
+**PROJECT-FIRST PHILOSOPHY:**
+- Projects are MAIN FOLDERS that contain related tasks
+- When creating multiple related tasks, ALWAYS suggest/create a project first
+- Projects help users track progress and organize work hierarchically
+- Example: "Website Redesign" project → contains tasks like "Design mockups", "Write content", etc.
+- Use project_id when creating tasks that belong to a project
+
 **IMPORTANT - Date Format Instructions:**
 When you call create_task or update_task, ALWAYS provide dates in one of these formats:
 1. ISO format: YYYY-MM-DD (e.g., "2026-01-27" for tomorrow)
@@ -73,12 +40,13 @@ When you call create_task or update_task, ALWAYS provide dates in one of these f
 
 **Important Guidelines:**
 1. BE PROACTIVE - Don't ask for details, make reasonable assumptions
-2. When user asks for "sample tasks" or "test tasks", CREATE 3-5 tasks immediately
+2. When user asks for "sample tasks" or "test tasks", CREATE a project first, then 3-5 tasks within it
 3. Use appropriate defaults for missing information (medium priority, due date in 3-7 days)
 4. Interpret relative dates ("tomorrow", "next week", "friday") and convert to YYYY-MM-DD
 5. TODAY'S DATE IS: """ + datetime.now().strftime("%Y-%m-%d") + """
 6. ALWAYS call tools to perform actual operations - never just explain what you would do
 7. Provide clear confirmation of what was done
+8. When creating tasks for a project, ALWAYS include the project_id parameter
 
 **Available Tools:**
 - create_task: Create a new task
@@ -87,9 +55,16 @@ When you call create_task or update_task, ALWAYS provide dates in one of these f
 - create_project: Create a new project
 - list_tasks: Query tasks (use when you need to find a task ID)
 
+**CRITICAL - Project Task Association:**
+When creating tasks for a project, ALWAYS include the project_id parameter:
+- Example: create_task(title="Task Name", description="...", project_id="project123")
+- Look for project mentions in the conversation to find the project ID
+- If user is discussing a specific project, associate all new tasks with it
+
 **Examples:**
 - User: "create a task tomorrow at 6pm" → Call create_task with due_date="2026-01-27" (tomorrow)
-- User: "create sample tasks" → CREATE 3-5 actual tasks with varied priorities and due dates
+- User: "create all these tasks for Fintech Website" → Create project first if needed, then create_task with project_id
+- User: "create sample tasks" → CREATE a project first, then 3-5 tasks within it using project_id
 - User: "create a task for next friday" → Call create_task with due_date="2026-01-31" (next friday)
 
 Always call tools and confirm the action taken with a friendly message showing what you created.
@@ -150,6 +125,27 @@ class ExecutorAgent:
 
             logger.info(f"Executor agent processing: {user_message[:100]}...")
 
+            # Extract project context from conversation history
+            project_id = state.get("project_id")
+            if not project_id and state.get("messages"):
+                # Try to find project mentions in recent conversation
+                from app.services.project_service import ProjectService
+                project_service = ProjectService()
+                projects = await project_service.list_projects(self.user_id)
+                
+                # Search recent messages for project mentions
+                recent_text = " ".join([
+                    msg.get("content", "") if isinstance(msg, dict) else getattr(msg, 'content', '')
+                    for msg in state["messages"][-5:]  # Last 5 messages
+                ])
+                
+                # Find which project is mentioned most recently
+                for project in projects.projects:
+                    if project.name.lower() in recent_text.lower():
+                        project_id = project.id
+                        logger.info(f"Extracted project context from conversation: {project.name} ({project_id})")
+                        break
+
             # Add context about previous planning if available
             context = ""
             if state.get("task_context", {}).get("subtasks"):
@@ -167,10 +163,11 @@ class ExecutorAgent:
                 except Exception as e:
                     logger.debug(f"Could not load task details: {e}")
             
-            # Add project-aware context if project_id is in state
-            if state.get("project_id"):
-                context += f"\nCurrent project context: project_id={state['project_id']}"
-                context += "\nConsider creating tasks within this project context."
+            # Add project-aware context if project_id is in state or extracted
+            if project_id:
+                context += f"\n\n🎯 **PROJECT CONTEXT**: You are creating tasks for a specific project."
+                context += f"\nAlways pass project_id='{project_id}' when creating tasks with create_task() tool."
+                context += "\nEach task created must include this project_id parameter."
 
             # Build context-aware system prompt
             system_prompt = PromptBuilder.build_executor_prompt(EXECUTOR_SYSTEM_PROMPT, state)

@@ -4,7 +4,7 @@ from firebase_admin import firestore
 from fastapi import HTTPException
 from fastapi import status as http_status
 from typing import Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -198,7 +198,7 @@ class TaskService:
             Combined list of relevant tasks
         """
         try:
-            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
             today_end = today_start + timedelta(days=1)
 
             all_tasks = {}  # Use dict to deduplicate by ID
@@ -224,7 +224,9 @@ class TaskService:
                 if due_date:
                     # Convert Firestore timestamp to datetime if needed
                     if hasattr(due_date, 'timestamp'):
-                        due_date = datetime.fromtimestamp(due_date.timestamp())
+                        due_date = datetime.fromtimestamp(due_date.timestamp(), tz=timezone.utc)
+                    elif isinstance(due_date, datetime) and due_date.tzinfo is None:
+                        due_date = due_date.replace(tzinfo=timezone.utc)
 
                     # Due today
                     if today_start <= due_date < today_end:
@@ -247,7 +249,8 @@ class TaskService:
             priority_order = {"urgent": 0, "high": 1, "medium": 2, "low": 3}
             tasks.sort(key=lambda t: (
                 priority_order.get(t.priority, 99),
-                t.dueDate or datetime.max
+                (t.dueDate.replace(tzinfo=timezone.utc) if isinstance(t.dueDate, datetime) and t.dueDate.tzinfo is None else t.dueDate)
+                or datetime.max.replace(tzinfo=timezone.utc)
             ))
 
             logger.info(f"Retrieved {len(tasks)} today tasks for user {user_id}")

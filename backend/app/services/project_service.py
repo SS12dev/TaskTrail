@@ -3,6 +3,7 @@ from app.models.project import ProjectCreate, ProjectUpdate, ProjectResponse, Pr
 from firebase_admin import firestore
 from fastapi import HTTPException
 from fastapi import status as http_status
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -121,30 +122,35 @@ class ProjectService:
             List of projects with task counts
         """
         try:
-            # Start with user filter
+            # Start with user filter only to avoid composite index requirement
             query = self.projects_ref.where(filter=firestore.FieldFilter("userId", "==", user_id))
-
-            # Filter archived if needed
-            if not include_archived:
-                query = query.where(filter=firestore.FieldFilter("isArchived", "==", False))
-
-            # Order by creation date
-            query = query.order_by("createdAt", direction=firestore.Query.DESCENDING)
 
             # Execute query
             docs = query.stream()
 
-            projects = []
+            project_items = []
             for doc in docs:
                 project_data = doc.to_dict()
+
+                # Filter archived in memory if needed
+                if not include_archived and project_data.get("isArchived", False):
+                    continue
+
                 project_data["id"] = doc.id
 
                 # Get task count for each project
                 task_count = await self._get_task_count(doc.id, user_id)
                 project_data["taskCount"] = task_count
 
-                projects.append(ProjectResponse(**project_data))
+                project_items.append(project_data)
 
+            # Sort by createdAt in memory (desc)
+            def sort_key(item):
+                return item.get("createdAt") or datetime.min
+
+            project_items.sort(key=sort_key, reverse=True)
+
+            projects = [ProjectResponse(**item) for item in project_items]
             logger.info(f"Retrieved {len(projects)} projects for user {user_id}")
             return ProjectListResponse(projects=projects, total=len(projects))
 

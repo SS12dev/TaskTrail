@@ -25,10 +25,10 @@ npm run dev        # Vite dev server, :5173
 npm run build      # tsc -b && vite build (type-checks)
 npm run lint       # eslint
 
-# MCP server (from mcp-server/)
-pip install -e ".[dev]"
-tasktrail-mcp                                  # run over stdio
-pytest                                         # tests
+# MCP server (from mcp-server/, needs uv: https://docs.astral.sh/uv/)
+uv sync --extra dev
+uv run tasktrail-mcp                           # run over stdio
+uv run pytest                                  # tests (mocked, no live backend needed)
 ```
 
 There is no backend test suite yet; verify backend changes by running the server and hitting `/docs`.

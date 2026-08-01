@@ -59,7 +59,19 @@ TaskTrail/
 │   ├── tailwind.config.js       # Tailwind CSS configuration
 │   └── tsconfig.json            # TypeScript configuration
 │
-└── docs/                         # Documentation (future)
+├── mcp-server/                   # MCP server exposing the API to MCP clients
+│   ├── src/tasktrail_mcp/
+│   │   ├── server.py             # Entry point — wires up tools/resources/prompts
+│   │   ├── client.py             # HTTP client for the backend REST API
+│   │   ├── auth.py               # Firebase refresh-token -> ID token manager
+│   │   ├── tools/                # tasks / projects / agent tool wrappers
+│   │   ├── resources.py          # tasktrail:// read-only resources
+│   │   └── prompts.py            # daily_standup, weekly_review, plan_project
+│   ├── scripts/get_refresh_token.py  # one-time auth setup helper
+│   └── tests/                    # mocked, no live backend required
+│
+└── docs/
+    └── MCP_DESIGN.md              # MCP server design & architecture decisions
 ```
 
 ## 🔧 Tech Stack
@@ -154,6 +166,35 @@ Server will be available at `http://localhost:8000`
 
 Application will be available at `http://localhost:5173`
 
+### MCP Server Setup
+
+Exposes TaskTrail to MCP clients (Claude Desktop, Claude Code) so an LLM can
+manage your tasks conversationally. Requires the backend running and a
+Firebase user account. Full design: [`docs/MCP_DESIGN.md`](./docs/MCP_DESIGN.md).
+
+1. **Install [uv](https://docs.astral.sh/uv/)**, then:
+   ```bash
+   cd mcp-server
+   uv sync --extra dev
+   ```
+
+2. **Get a refresh token** (one-time, needs your Firebase Web API key and a
+   TaskTrail account email/password):
+   ```bash
+   uv run python scripts/get_refresh_token.py
+   ```
+
+3. **Configure** — copy `.env.example` to `.env` and fill in
+   `FIREBASE_WEB_API_KEY` and `FIREBASE_REFRESH_TOKEN` from step 2.
+
+4. **Run**:
+   ```bash
+   uv run tasktrail-mcp
+   ```
+
+See [`mcp-server/README.md`](./mcp-server/README.md) for the Claude Desktop
+config snippet and full tool/resource/prompt reference.
+
 ## 🤖 AI Agent System
 
 TaskTrail uses a multi-agent system architecture:
@@ -203,8 +244,10 @@ TaskTrail uses a multi-agent system architecture:
 - `DELETE /api/v1/projects/{id}` - Delete project
 
 ### Agent
-- `POST /api/v1/agent/message` - Send message to AI agent
+- `POST /api/v1/agent/chat` - Send message to AI agent
+- `GET /api/v1/agent/capabilities` - List agent capabilities
 - `GET /api/v1/agent/history` - Get conversation history
+- `DELETE /api/v1/agent/history` - Clear conversation history
 
 ### A2A (Agent-to-Agent)
 - `WebSocket /ws/a2a` - Agent communication channel
@@ -223,6 +266,12 @@ Frontend:
 ```bash
 cd frontend
 npm run test
+```
+
+MCP server (mocked, no live backend needed):
+```bash
+cd mcp-server
+uv run pytest
 ```
 
 ### Code Style
